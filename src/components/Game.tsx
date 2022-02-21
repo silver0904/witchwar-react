@@ -1,10 +1,11 @@
-import React from "react";
-import { GameInfo, PlayerInfo, PlayerPosition, WebsocketMethod } from "../type/type";
+import React, { useContext } from "react";
+import { GameConfig, GameInfo, PlayerInfo, Vector, WebsocketMethod } from "../type/type";
 import { tick } from "../utils/tickUtils";
 import { Box } from "./Player";
 // @ts-ignore
 import Keyb from "keyb";
 import { Menu } from "./Menu";
+import { calculateDirection, calculatePosition, calculateVelocity, equals, isZero } from "../utils/physicUtils";
 
 type GameState ={
     currentClientId: string | undefined
@@ -20,7 +21,7 @@ export class Game extends React.Component<GameProps, GameState> {
         super(props);
         this.state ={
            currentClientId: undefined,
-           gameInfo: undefined
+           gameInfo: undefined,
         }
         
         this.props.websocket.onmessage = message =>{
@@ -29,7 +30,7 @@ export class Game extends React.Component<GameProps, GameState> {
             if (response.method === WebsocketMethod.CONNECT){
                 this.setState({
                     ...this.state,
-                    currentClientId: response.clientId
+                    currentClientId: response.clientId,
                 })
             }
 
@@ -56,28 +57,35 @@ export class Game extends React.Component<GameProps, GameState> {
             return;
         }
         let playerInfo = this.state.gameInfo.players[this.state.currentClientId] ;
-        let positionVar: PlayerPosition = {x:0, y:0}
+        let character = playerInfo.character;
+
+        let controlledDirection : Vector = new Vector(0,0);
+
         if(Keyb.isDown("S")) {
-            positionVar.y -= 0.3 * frameTime
+            controlledDirection.y -= 1;
         }
         if(Keyb.isDown("W")){
-            positionVar.y += 0.3 * frameTime
+            controlledDirection.y += 1;
         }
         if(Keyb.isDown("A")) {
-            positionVar.x -= 0.3 * frameTime
+            controlledDirection.x -= 1;
         }
         if(Keyb.isDown("D")) {
-            positionVar.x += 0.3 * frameTime
+            controlledDirection.x += 1
         }
-        if (positionVar.x === 0 && positionVar.y === 0){
+
+        const newDirection = calculateDirection(controlledDirection, character.direction);
+        const newVelocity = calculateVelocity(controlledDirection, 0.3, character.impulse);
+        const newPosition = calculatePosition(character.position, newVelocity, frameTime);
+        if ( equals(newDirection, character.direction) && 
+            isZero(newVelocity) && equals(newPosition, character.position)){
             return;
         }
-        let position = playerInfo.position
-        position = {
-            x: position.x + positionVar.x,
-            y: position.y + positionVar.y
-        }
-        playerInfo.position = position;
+        character.direction = newDirection;
+        //character.impulse = newVelocity;
+        character.position = newPosition
+
+        playerInfo.character = character;
         let newPlayers = this.state.gameInfo.players;
         newPlayers[this.state.currentClientId] = playerInfo;
         this.setState({

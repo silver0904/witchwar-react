@@ -1,0 +1,8 @@
+{
+    "SERVER_URL": "http://localhost:9091",
+    "WS_URL": "ws://localhost:9090",
+    "ARENA":{
+        "WIDTH": 1000,
+        "HEIGHT": 1000
+    }
+}
