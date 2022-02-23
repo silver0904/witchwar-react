@@ -1,16 +1,15 @@
-import axios from 'axios';
 import './App.css';
 import { Game } from './components/Game';
 import Config from './config.json'
 import GameContextProvider from './context/GameContextProvider';
 
-async function App() {
+function App() {
   const ws = new WebSocket(Config.WS_URL);
-  const gameConfig = await axios.get(Config.SERVER_URL + '/config').then(response => {return response.data });
-
+  const defaultGameConfig = {userColors:[]}
+  
   return (
     <div className="App">
-      <GameContextProvider gameConfig={gameConfig}>
+      <GameContextProvider gameConfig={defaultGameConfig}>
         <Game websocket={ws}/>
       </GameContextProvider>
       

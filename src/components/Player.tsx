@@ -1,8 +1,8 @@
 import { FC } from "react";
 import styled from 'styled-components';
 import { PlayerInfo } from "../type/type";
-import arrowSvg from "../static/arrow.svg";
-import { convertPositionToRenderPosition, convertVectorToDegree } from "../utils/physicUtils";
+import {ReactComponent as ArrowSvg} from "../static/arrow.svg";
+import { convertPositionToRenderPosition, convertVectorToDegree, isZero } from "../utils/physicUtils";
 
 type PlayerProps = {
     playerInfo: PlayerInfo
@@ -12,16 +12,17 @@ const BoxDiv = styled.div({
     position: 'absolute',
 })
 
-export const Box : FC<PlayerProps> = (props) => {
+export const Player : FC<PlayerProps> = (props) => {
     const {character, general } = props.playerInfo
-    const rotation = convertVectorToDegree(character.direction);
+    const rotation = character.status == "CHARGING" && character.aimDirection ?
+    convertVectorToDegree(character.aimDirection) :
+    convertVectorToDegree(character.direction);
     const renderPos = convertPositionToRenderPosition(character.position);
     return (
       <BoxDiv style={{top: `${renderPos.top}px`, 
-        right: `${renderPos.right}.px`,
-        transform: `rotate(${rotation}deg)`}}>
-        {/* <p>{name}</p> */}
-        <img src={arrowSvg} style={{width: "25px", height: "25px"}}/>
+        right: `${renderPos.right}.px`}}>
+        <ArrowSvg width="26px" height="26px" fill={general.color.code} transform={`rotate(${rotation})`}/>
+        <p>{Math.floor(character.health)}</p>
       </BoxDiv>
     )
 }

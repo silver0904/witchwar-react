@@ -36,15 +36,18 @@ export type RenderPosition = {
 
 export type GeneralInfo = {
     name: string
-    color: string
+    color: UserColor
 }
 
 export type CharacterInfo = {
     position: Position;
     direction: Vector;
+    aimDirection: Vector| undefined;
     impulse: Vector;
     health: number;
+    status: string | undefined;
 }
+
 
 export type PlayerInfo = {
     clientId: string;
@@ -66,7 +69,7 @@ export type GameConfig = {
 }
 
 export type UserColor = {
-    id: number;
+    id: string;
     name: string;
     code: string;
 }

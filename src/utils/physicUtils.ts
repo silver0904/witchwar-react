@@ -21,10 +21,10 @@ export const calculateVelocity = (controlledDirection: Vector, movementSpeedFact
 
 export const calculatePosition = (position: Position, velocity: Vector, time: number): Position =>{
     let pos =  new Position(position.x + velocity.x * time, position.y + velocity.y * time)
-    if (pos.x > Config.ARENA.WIDTH/2 ) pos.x = Config.ARENA.WIDTH/2
-    if (pos.x < -Config.ARENA.WIDTH/2 ) pos.x = -Config.ARENA.WIDTH/2
-    if (pos.y > Config.ARENA.HEIGHT/2 ) pos.y = Config.ARENA.HEIGHT/2
-    if (pos.y < -Config.ARENA.HEIGHT/2 ) pos.y = -Config.ARENA.HEIGHT/2
+    if (pos.x > Config.STAGE.WIDTH/2 ) pos.x = Config.STAGE.WIDTH/2
+    if (pos.x < -Config.STAGE.WIDTH/2 ) pos.x = -Config.STAGE.WIDTH/2
+    if (pos.y > Config.STAGE.HEIGHT/2 ) pos.y = Config.STAGE.HEIGHT/2
+    if (pos.y < -Config.STAGE.HEIGHT/2 ) pos.y = -Config.STAGE.HEIGHT/2
     return pos;
 }
 
@@ -36,9 +36,20 @@ export const convertVectorToDegree = (vector: Vector) : number =>{
 
 export const convertPositionToRenderPosition= (position: Position) : RenderPosition =>{
     return {
-        top: Math.floor(Config.ARENA.HEIGHT/2 - position.y),
-        right: Math.floor(Config.ARENA.WIDTH/2 - position.x)
+        top: Math.floor(Config.STAGE.HEIGHT/2 - position.y),
+        right: Math.floor(Config.STAGE.WIDTH/2 - position.x)
     }
+}
+
+export const convertRenderPositionToPosition = (renderPosition: RenderPosition) : Position =>{
+    return {
+        x: Math.floor(Config.STAGE.WIDTH/2 - renderPosition.right),
+        y: Math.floor(Config.STAGE.HEIGHT/2 - renderPosition.top),
+    }
+}
+
+export const calculateVectorWith2Position = (sourcePosition: Position, targetPosition: Position): Vector =>{
+    return new Vector(targetPosition.x-sourcePosition.x, targetPosition.y-sourcePosition.y);
 }
 
 export const plus = (a: Vector, b:Vector) : Vector => {
@@ -58,6 +69,6 @@ export const equals = (a: Vector| Position, b: Vector| Position) : boolean =>{
     return a.x === b.x && a.y === b.y
 }
 
-export const isZero = (a: Vector) : boolean => {
+export const isZero = (a: Vector| Position) : boolean => {
     return a.x === 0 && a.y === 0
 }

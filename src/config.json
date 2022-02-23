@@ -1,8 +1,12 @@
 {
     "SERVER_URL": "http://localhost:9091",
     "WS_URL": "ws://localhost:9090",
+    "STAGE":{
+        "WIDTH": 1600,
+        "HEIGHT": 1600
+    },
     "ARENA":{
-        "WIDTH": 1000,
-        "HEIGHT": 1000
+        "SIZE": 800,
+        "TYPE": "CIRCLE"
     }
 }
