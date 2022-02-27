@@ -7,7 +7,7 @@ import { Player } from "./Player";
 // @ts-ignore
 import Keyb from "keyb";
 import { Menu } from "./Menu";
-import { calculateMoveDirection, calculatePosition, calculateDirectionWith2Position, calculateVelocity, convertRenderPositionToPosition, equals, isZero, convertVectorToDirection } from "../utils/physicUtils";
+import { calculateMoveDirection, calculatePosition, calculateDirectionWith2Position, calculateVelocity, convertRenderPositionToPosition, equals, isZero, convertVectorToDirection, checkCollisionBetweenSquares } from "../utils/physicUtils";
 import { Stage } from "./Stage";
 import Config from "../config.json";
 import { Mouse } from "../classes/Mouse";
@@ -98,6 +98,46 @@ export class Game extends React.Component<GameProps, GameState> {
         }
     }
 
+    checkObjectCollisions = (frameTime : number) =>{
+        if (!this.state.currentClientId || !this.state.gameInfo){
+            return;
+        }
+        let playerInfo = this.state.gameInfo.players[this.state.currentClientId] ;
+        let character = playerInfo.character;
+        let updated = false;
+        if (this.checkInMist(character.position)){
+            character.health -= frameTime * 0.01
+            updated = true;
+        }
+        let projectiles = this.state.gameInfo.projectiles;
+        projectiles.forEach((projectile, index, arr) =>{
+            if (projectile.emitterClientId !== this.state.currentClientId && 
+                checkCollisionBetweenSquares(character.position, {width:26,height:26}, projectile.position, {width:26, height:26})){
+                // hit by fireball
+                console.log("hit!")
+                // delete projectile
+                arr.splice(index, 1);
+                playerInfo.character = character;
+                this.updateProjectileToServer(WebsocketMethod.DELETE, projectile);
+            }
+        })
+        if (updated){
+            this.updatePlayerToServer(playerInfo);
+        }
+        let newPlayers = this.state.gameInfo.players;
+        newPlayers[this.state.currentClientId] = playerInfo;
+        this.setState({
+            ...this.state,
+            gameInfo:{
+                ...this.state.gameInfo,
+                projectiles: projectiles,
+                players: newPlayers
+            }
+        })
+
+
+    }
+
     updateProjectiles = (frameTime: number) =>{
         if (!this.state.currentClientId || !this.state.gameInfo){
             return;
@@ -138,9 +178,6 @@ export class Game extends React.Component<GameProps, GameState> {
         }
         let playerInfo = this.state.gameInfo.players[this.state.currentClientId] ;
         let character = playerInfo.character;
-        if (this.checkInMist(character.position)){
-            character.health -= frameTime * 0.01
-        }
 
         character = this.updatePlayerPosition(character, frameTime)
 
@@ -274,8 +311,9 @@ export class Game extends React.Component<GameProps, GameState> {
 
     componentDidMount = ()=>{
         tick((frameTime:number)=>{
-            this.updateProjectiles(frameTime)
-            this.updatePlayer(frameTime)
+            this.checkObjectCollisions(frameTime);
+            this.updateProjectiles(frameTime);
+            this.updatePlayer(frameTime);
         })
         
     }

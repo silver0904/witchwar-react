@@ -3,6 +3,10 @@ import { Position } from "../classes/Position";
 import { Projectile } from "../classes/Projectile";
 import { Vector } from "../classes/Vector";
 
+export type SquareDimenion = {
+    width: number,
+    height: number
+}
 export type RenderPosition = {
     top: number;
     right: number;

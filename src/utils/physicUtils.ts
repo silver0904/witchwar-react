@@ -1,5 +1,5 @@
 import Config from "../config.json";
-import { RenderPosition } from "../type/type";
+import { RenderPosition, SquareDimenion } from "../type/type";
 import { Vector } from "../classes/Vector";
 import { Position } from "../classes/Position";
 import { Direction } from "../classes/Direction";
@@ -71,6 +71,24 @@ export const convertRenderPositionToPosition = (renderPosition: RenderPosition) 
 export const calculateDirectionWith2Position = (sourcePosition: Position, targetPosition: Position): Direction =>{
     return convertVectorToDirection
     (new Vector(targetPosition.x-sourcePosition.x, targetPosition.y-sourcePosition.y));
+}
+
+export const checkCollisionBetweenSquares = (xPos: Position, xDim: SquareDimenion, yPos: Position, yDim: SquareDimenion) : boolean =>{
+    let xRenderPos = convertPositionToRenderPosition(xPos);
+    let yRenderPos = convertPositionToRenderPosition(yPos);
+    // return (
+    //     (xHitbox.top > yHitbox.bottom && xHitbox.top < yHitbox.top && xHitbox.right > yHitbox.left && xHitbox.left < yHitbox.left) ||
+    //     (xHitbox.top > yHitbox.bottom && xHitbox.top < yHitbox.top && xHitbox.left < yHitbox.right && xHitbox.right > yHitbox.right) ||
+    //     (xHitbox.bottom < yHitbox.top && xHitbox.bottom > yHitbox.bottom && xHitbox.left < yHitbox.right && xHitbox.right > yHitbox.right) ||
+    //     (xHitbox.bottom < yHitbox.top && xHitbox.bottom > yHitbox.bottom && xHitbox.right > yHitbox.left && xHitbox.left < yHitbox.left) 
+    // )
+    return !(
+        ((xRenderPos.top + xDim.height/2)< yRenderPos.top) ||
+        (xRenderPos.top > (yRenderPos.top + yDim.height/2)) ||
+        ((xRenderPos.right + xDim.width/2) < yRenderPos.right) ||
+        (xRenderPos.right >(yRenderPos.right + yDim.width/2))
+    );
+
 }
 
 export const plus = (a: Vector, b:Vector) : Vector => {
