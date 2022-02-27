@@ -1,33 +1,7 @@
-export class Position {
-    x:number; 
-    y:number;
-    constructor(x:number, y:number){
-        this.x = x;
-        this.y = y;
-    }
-    // public isZero = () : boolean => {
-    //     return this.x === 0 && this.y === 0
-    // }
-}
-
-export class Vector extends Position{
-
-    constructor(x:number, y:number){
-        super(x,y);
-    }
-
-    // public plus = (arg: Vector) : Vector => {
-    //     this.x += arg.x;
-    //     this.y += arg.y;
-    //     return new Vector(this.x, this.y);
-    // }
-    // public times = (arg: number): Vector => {
-    //     this.x *= arg;
-    //     this.y *= arg;
-    //     return new Vector(this.x, this.y);
-    // }
-    
-}
+import { Direction } from "../classes/Direction";
+import { Position } from "../classes/Position";
+import { Projectile } from "../classes/Projectile";
+import { Vector } from "../classes/Vector";
 
 export type RenderPosition = {
     top: number;
@@ -41,11 +15,16 @@ export type GeneralInfo = {
 
 export type CharacterInfo = {
     position: Position;
-    direction: Vector;
-    aimDirection: Vector| undefined;
+    direction: Direction;
+    aimDirection: Direction| undefined;
     impulse: Vector;
     health: number;
-    status: string | undefined;
+    status: CharacterStatus;
+}
+
+export enum CharacterStatus {
+    CHARGING = "CHARGING",
+    IDLE = "IDLE"
 }
 
 
@@ -61,7 +40,8 @@ export type PlayerMap = {
 
 export type GameInfo = {
     gameId: string,
-    players: PlayerMap
+    players: PlayerMap,
+    projectiles: Projectile[]
 }
 
 export type GameConfig = {
@@ -78,5 +58,12 @@ export enum WebsocketMethod {
     CONNECT = "CONNECT",
     CREATE = "CREATE",
     JOIN = "JOIN",
-    UPDATE = "UPDATE"
+    UPDATE = "UPDATE",
+    DELETE = "DELETE"
+}
+
+export enum WebsocketEntityType {
+    GAME = "GAME",
+    PLAYER = "PLAYER",
+    PROJECTILE = "PROJECTILE"
 }

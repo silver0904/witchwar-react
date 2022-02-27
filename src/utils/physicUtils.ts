@@ -1,21 +1,41 @@
 import Config from "../config.json";
-import { Position, RenderPosition, Vector } from "../type/type";
+import { RenderPosition } from "../type/type";
+import { Vector } from "../classes/Vector";
+import { Position } from "../classes/Position";
+import { Direction } from "../classes/Direction";
 
 
-export const calculateDirection = (controlledDirection: Vector, currentDirection: Vector): Vector =>{
-    if (controlledDirection.x === 0 && controlledDirection.y === 0) return currentDirection;
-    const directionVar = { 
-        x: (controlledDirection.x - currentDirection.x)/15 ,
-        y: (controlledDirection.y - currentDirection.y)/15 
-    }
-    return new Vector( currentDirection.x + directionVar.x,currentDirection.y + directionVar.y)
-    
-    
+export const calculateMoveDirection = (controlledDirection: Direction, currentDirection: Direction): Direction =>{
+    // if (currentDirection.degrees == undefined || controlledDirection.degrees == undefined) return currentDirection;
+    // const degree = 5;
+    // let degreeVar = controlledDirection.degrees - currentDirection.degrees ;
+    // if (degreeVar > 180) degreeVar = 180 - degreeVar
+    // if (degreeVar > -degree && degreeVar <  degree ){
+    //     return controlledDirection
+    // }
+    // else if (degreeVar > degree){
+    //     return {degrees: currentDirection.degrees + degree};
+    // }
+    // else {
+    //     return {degrees: currentDirection.degrees - degree};
+    // }
+    return controlledDirection.degrees!== undefined ? controlledDirection : currentDirection
 }
 
-export const calculateVelocity = (controlledDirection: Vector, movementSpeedFactor: number, impulse: Vector): Vector =>{
-    const factor = controlledDirection.x && controlledDirection.y ? movementSpeedFactor* 0.707 : movementSpeedFactor;
-    let controlledVelocity = times(controlledDirection,factor);
+export const convertDirectionToVector = (direction: Direction, magnitude: number) : Vector =>{
+    const degrees = direction.degrees;
+    if (degrees == undefined) return new Vector(0,0);
+    return new Vector( magnitude* Math.sin(degrees/180 * Math.PI), magnitude* Math.cos(degrees/180 * Math.PI))
+}
+
+export const convertVectorToDirection = (vector: Vector): Direction => {
+    const degrees = isZero(vector) ? undefined: convertVectorToDegree(vector)
+    return {degrees}
+}
+
+export const calculateVelocity = (controlledDirection: Direction, movementSpeedFactor: number, impulse: Vector| undefined): Vector =>{
+    let controlledVelocity = convertDirectionToVector(controlledDirection , movementSpeedFactor);
+    if (impulse == undefined) return controlledVelocity
     return new Vector(controlledVelocity.x - impulse.x,controlledVelocity.y - impulse.y)
 }
 
@@ -48,8 +68,9 @@ export const convertRenderPositionToPosition = (renderPosition: RenderPosition) 
     }
 }
 
-export const calculateVectorWith2Position = (sourcePosition: Position, targetPosition: Position): Vector =>{
-    return new Vector(targetPosition.x-sourcePosition.x, targetPosition.y-sourcePosition.y);
+export const calculateDirectionWith2Position = (sourcePosition: Position, targetPosition: Position): Direction =>{
+    return convertVectorToDirection
+    (new Vector(targetPosition.x-sourcePosition.x, targetPosition.y-sourcePosition.y));
 }
 
 export const plus = (a: Vector, b:Vector) : Vector => {

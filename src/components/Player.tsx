@@ -15,8 +15,8 @@ const BoxDiv = styled.div({
 export const Player : FC<PlayerProps> = (props) => {
     const {character, general } = props.playerInfo
     const rotation = character.status == "CHARGING" && character.aimDirection ?
-    convertVectorToDegree(character.aimDirection) :
-    convertVectorToDegree(character.direction);
+    character.aimDirection.degrees :
+    character.direction.degrees;
     const renderPos = convertPositionToRenderPosition(character.position);
     return (
       <BoxDiv style={{top: `${renderPos.top}px`, 

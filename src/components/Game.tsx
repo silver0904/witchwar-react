@@ -1,14 +1,19 @@
 import React from "react";
-import { CharacterInfo, GameConfig, GameInfo, PlayerInfo, Position, Vector, WebsocketMethod } from "../type/type";
+import { CharacterInfo, CharacterStatus, GameConfig, GameInfo, PlayerInfo, WebsocketEntityType, WebsocketMethod } from "../type/type";
+import { Vector } from "../classes/Vector";
+import { Position } from "../classes/Position";
 import { tick } from "../utils/tickUtils";
 import { Player } from "./Player";
 // @ts-ignore
 import Keyb from "keyb";
 import { Menu } from "./Menu";
-import { calculateDirection, calculatePosition, calculateVectorWith2Position, calculateVelocity, convertRenderPositionToPosition, equals, isZero } from "../utils/physicUtils";
+import { calculateMoveDirection, calculatePosition, calculateDirectionWith2Position, calculateVelocity, convertRenderPositionToPosition, equals, isZero, convertVectorToDirection } from "../utils/physicUtils";
 import { Stage } from "./Stage";
 import Config from "../config.json";
-import { Mouse } from "../utils/Mouse";
+import { Mouse } from "../classes/Mouse";
+import { Projectile } from "../classes/Projectile";
+import { Direction } from "../classes/Direction";
+import { Fireball } from "./Fireball";
 
 type GameState ={
     currentClientId: string | undefined
@@ -40,22 +45,91 @@ export class Game extends React.Component<GameProps, GameState> {
                     currentClientId: response.clientId,
                     gameConfig: response.config
                 })
+                return;
             }
+            switch (response.entity){
+                case (WebsocketEntityType.GAME):
+                    this.setState({
+                        ...this.state,
+                        gameInfo: response.game as GameInfo
+                    })
+                    break;
+                case (WebsocketEntityType.PLAYER):
+                    if (!this.state.gameInfo) break;
+                    let players = this.state.gameInfo.players;
+                    players[response.player.clientId] = response.player;
+                    this.setState({
+                        ...this.state,
+                        gameInfo: {
+                            ...this.state.gameInfo,
+                            players
+                        }
+                    });
+                    break;
+                case (WebsocketEntityType.PROJECTILE):
+                    if (!this.state.gameInfo) break;
+                    let projectiles = this.state.gameInfo.projectiles;
+                    const index = projectiles.findIndex(p => p.projectileId == response.projectile.projectileId);
 
-            if (response.method === WebsocketMethod.CREATE){
-                this.setState({
-                    ...this.state,
-                    gameInfo: response.game as GameInfo
-                })
-            }
+                    if (response.method == WebsocketMethod.DELETE ) {
+                        if (index == -1) {
+                            break;
+                        }
+                        projectiles.splice(index, 1)
+                    }
+                    if (response.method == WebsocketMethod.UPDATE){
+                        if (index == -1) {
+                            projectiles.push(response.projectile);
+                        }
+                        else{
+                            projectiles[index] = response.projectile
+                        }
+                    }
+                    this.setState({
+                        ...this.state,
+                        gameInfo: {
+                            ...this.state.gameInfo,
+                            projectiles
+                        }
+                    })
+                    break;
 
-            if (response.method === WebsocketMethod.JOIN){
-                this.setState({
-                    ...this.state,
-                    gameInfo: response.game as GameInfo
-                })
             }
         }
+    }
+
+    updateProjectiles = (frameTime: number) =>{
+        if (!this.state.currentClientId || !this.state.gameInfo){
+            return;
+        }
+        let projectiles = this.state.gameInfo.projectiles;
+        if (!projectiles){
+            return;
+        }
+        // performance optimize: no need to update projectile in server
+        projectiles.forEach((projectile, index, arr) =>{
+            if (projectile.emitterClientId === this.state.currentClientId && 
+                (Math.abs(projectile.position.x) >= Config.STAGE.WIDTH/2 ||
+                Math.abs(projectile.position.y) >= Config.STAGE.HEIGHT/2 )){
+                arr.splice(index, 1);
+                this.updateProjectileToServer(WebsocketMethod.DELETE, projectile);
+            }
+            else{
+                const newVelocity = calculateVelocity(projectile.direction, 0.3, undefined);
+                const newPosition = calculatePosition(projectile.position, newVelocity, frameTime);
+                projectile.position = newPosition;
+                arr[index] = projectile
+                this.updateProjectileToServer(WebsocketMethod.UPDATE, projectile);
+            }
+        })
+        this.setState({
+            ...this.state,
+            gameInfo:{
+                ...this.state.gameInfo,
+                projectiles: projectiles
+            }
+        })
+        
     }
 
     updatePlayer = (frameTime: number) => {
@@ -85,38 +159,41 @@ export class Game extends React.Component<GameProps, GameState> {
     }
     
     updatePlayerPosition = (character: CharacterInfo, frameTime: number) : CharacterInfo =>{
-        //console.log(this.state.playerPosition)
         let newCharacterInfo = character;
-        let walkingDirection : Vector = new Vector(0,0);
-        let mouseDirection : Vector = new Vector(0,0);
+        let walkingVector : Vector = new Vector(0,0);
+        let mouseDirection : Direction = {degrees: undefined};
         if (this.mouse.isPressed){
             const mousePosition = convertRenderPositionToPosition(this.mouse.getRenderPosition());
-            mouseDirection = calculateVectorWith2Position(character.position, mousePosition)
-            newCharacterInfo.status ="CHARGING"
+            mouseDirection = calculateDirectionWith2Position(character.position, mousePosition)
+            newCharacterInfo.status = CharacterStatus.CHARGING
         }
         else{
-            newCharacterInfo.status = undefined
+            if (character.status == CharacterStatus.CHARGING ){
+                // release fireball
+                this.emitProjectile(character, "1")
+            }
+            newCharacterInfo.status = CharacterStatus.IDLE
         }
         newCharacterInfo.aimDirection = mouseDirection
 
         
         if(Keyb.isDown("S")) {
-            walkingDirection.y -= 1;
+            walkingVector.y -= 1;
         }
         if(Keyb.isDown("W")){
-            walkingDirection.y += 1;
+            walkingVector.y += 1;
         }
         if(Keyb.isDown("A")) {
-            walkingDirection.x -= 1;
+            walkingVector.x -= 1;
         }
         if(Keyb.isDown("D")) {
-            walkingDirection.x += 1
+            walkingVector.x += 1
         }
-
-        const newDirection = calculateDirection(walkingDirection, character.direction);
+        const walkingDirection = convertVectorToDirection(walkingVector)
+        const newDirection = calculateMoveDirection(walkingDirection, character.direction);
         const newVelocity = calculateVelocity(walkingDirection, 0.3, character.impulse);
         const newPosition = calculatePosition(character.position, newVelocity, frameTime);
-        if ( equals(newDirection, character.direction) && isZero(mouseDirection) &&
+        if ( newDirection.degrees == character.direction.degrees && mouseDirection.degrees == undefined &&
             isZero(newVelocity) && equals(newPosition, character.position)){
             return newCharacterInfo;
         }
@@ -134,10 +211,36 @@ export class Game extends React.Component<GameProps, GameState> {
             (Config.ARENA.SIZE)/2 * (Config.ARENA.SIZE)/2
     }
 
+    emitProjectile = (character: CharacterInfo, projectileTypeId: string) => {
+        if (!character.aimDirection || !this.state.currentClientId) return;
+        const projectile: Projectile = {
+            projectileId:undefined,
+            typeId: projectileTypeId,
+            emitterClientId: this.state.currentClientId,
+            speed: {x:100, y:100},
+            direction: character.aimDirection,
+            position: character.position
+        }
+        this.updateProjectileToServer(WebsocketMethod.UPDATE, projectile);
+    }
+
+    updateProjectileToServer = (operation: WebsocketMethod, projectile: Projectile) =>{
+        if (!this.state.gameInfo || !this.state.currentClientId) return;
+        const payLoad = {
+            method: operation,
+            entity: WebsocketEntityType.PROJECTILE,
+            clientId: this.state.currentClientId,
+            gameId: this.state.gameInfo.gameId,
+            projectile: projectile
+        }
+        this.props.websocket.send(JSON.stringify(payLoad));
+    }
+
     createGame = (playerName: string, colorId: string) =>{
 
         const payLoad = {
             method: WebsocketMethod.CREATE,
+            entity: WebsocketEntityType.GAME,
             clientId: this.state.currentClientId,
             colorId,
             playerName
@@ -148,6 +251,7 @@ export class Game extends React.Component<GameProps, GameState> {
     joinGame = (playerName: string, gameId : string, colorId: string) =>{
         const payLoad = {
             method: WebsocketMethod.JOIN,
+            entity: WebsocketEntityType.GAME,
             clientId: this.state.currentClientId,
             gameId,
             colorId,
@@ -159,6 +263,7 @@ export class Game extends React.Component<GameProps, GameState> {
     updatePlayerToServer = (playerInfo: PlayerInfo) =>{
         const payLoad = {
             method: WebsocketMethod.UPDATE,
+            entity: WebsocketEntityType.PLAYER,
             gameId: this.state.gameInfo?.gameId,
             clientId: this.state.currentClientId,
             player: playerInfo
@@ -169,6 +274,7 @@ export class Game extends React.Component<GameProps, GameState> {
 
     componentDidMount = ()=>{
         tick((frameTime:number)=>{
+            this.updateProjectiles(frameTime)
             this.updatePlayer(frameTime)
         })
         
@@ -192,6 +298,11 @@ export class Game extends React.Component<GameProps, GameState> {
                         mouseUp={(event) => this.mouse.mouseReleased(event as any)}
                         mouseMove={(event) => this.mouse.mouseMoved(event as any)}
                         >
+                    {
+                        this.state.gameInfo.projectiles.map( projectile =>
+                            <Fireball projectileInfo={projectile}/>
+                        )
+                    }
                     { playerList.map(player =>
                         <Player playerInfo={player} 
                             key={player.clientId}
