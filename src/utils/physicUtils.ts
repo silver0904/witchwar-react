@@ -36,7 +36,7 @@ export const convertVectorToDirection = (vector: Vector): Direction => {
 export const calculateVelocity = (controlledDirection: Direction, movementSpeedFactor: number, impulse: Vector| undefined): Vector =>{
     let controlledVelocity = convertDirectionToVector(controlledDirection , movementSpeedFactor);
     if (impulse == undefined) return controlledVelocity
-    return new Vector(controlledVelocity.x - impulse.x,controlledVelocity.y - impulse.y)
+    return new Vector(controlledVelocity.x + impulse.x,controlledVelocity.y + impulse.y)
 }
 
 export const calculatePosition = (position: Position, velocity: Vector, time: number): Position =>{
@@ -89,6 +89,14 @@ export const checkCollisionBetweenSquares = (xPos: Position, xDim: SquareDimenio
         (xRenderPos.right >(yRenderPos.right + yDim.width/2))
     );
 
+}
+
+export const degradeImpulse = (impulse: Vector, rate: number, frametime: number ) : Vector =>{
+    const degratedImpulse = times(impulse,  1 - rate*frametime);
+    return {
+        x: Math.abs(degratedImpulse.x) < 0.05? 0 : degratedImpulse.x,
+        y: Math.abs(degratedImpulse.y) < 0.05? 0 : degratedImpulse.y 
+    }
 }
 
 export const plus = (a: Vector, b:Vector) : Vector => {

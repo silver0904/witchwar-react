@@ -7,7 +7,7 @@ import { Player } from "./Player";
 // @ts-ignore
 import Keyb from "keyb";
 import { Menu } from "./Menu";
-import { calculateMoveDirection, calculatePosition, calculateDirectionWith2Position, calculateVelocity, convertRenderPositionToPosition, equals, isZero, convertVectorToDirection, checkCollisionBetweenSquares } from "../utils/physicUtils";
+import { calculateMoveDirection, calculatePosition, calculateDirectionWith2Position, calculateVelocity, convertRenderPositionToPosition, equals, isZero, convertVectorToDirection, checkCollisionBetweenSquares, convertDirectionToVector, degradeImpulse } from "../utils/physicUtils";
 import { Stage } from "./Stage";
 import Config from "../config.json";
 import { Mouse } from "../classes/Mouse";
@@ -114,7 +114,7 @@ export class Game extends React.Component<GameProps, GameState> {
             if (projectile.emitterClientId !== this.state.currentClientId && 
                 checkCollisionBetweenSquares(character.position, {width:26,height:26}, projectile.position, {width:26, height:26})){
                 // hit by fireball
-                console.log("hit!")
+                character.impulse = convertDirectionToVector(projectile.direction, 2);
                 // delete projectile
                 arr.splice(index, 1);
                 playerInfo.character = character;
@@ -236,7 +236,7 @@ export class Game extends React.Component<GameProps, GameState> {
         }
         
         newCharacterInfo.direction = newDirection;
-        //character.impulse = newVelocity;
+        character.impulse = degradeImpulse(character.impulse, 0.001, frameTime);
         newCharacterInfo.position = newPosition
         return newCharacterInfo;
 
